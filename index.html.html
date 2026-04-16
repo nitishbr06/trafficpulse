@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrafficPulse — Live Urban Crowd Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #050a0f;
+      --surface: #0c1520;
+      --border: #1a2a3a;
+      --text: #c8dde8;
+      --muted: #4a6878;
+      --accent: #00d4ff;
+
+      --green: #00e676;
+      --green-bg: rgba(0,230,118,0.08);
+      --green-border: rgba(0,230,118,0.3);
+
+      --yellow: #ffea00;
+      --yellow-bg: rgba(255,234,0,0.08);
+      --yellow-border: rgba(255,234,0,0.3);
+
+      --orange: #ff6d00;
+      --orange-bg: rgba(255,109,0,0.08);
+      --orange-border: rgba(255,109,0,0.3);
+
+      --red: #ff1744;
+      --red-bg: rgba(255,23,68,0.08);
+      --red-border: rgba(255,23,68,0.3);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glowing orb */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60vw;
+      height: 60vw;
+      background: radial-gradient(circle, rgba(0,212,255,0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 60px; }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 0 32px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #00d4ff22, #00d4ff44);
+      border: 1px solid rgba(0,212,255,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+
+    .logo-text {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 2px;
+      color: #fff;
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: -4px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      background: rgba(255,23,68,0.1);
+      border: 1px solid rgba(255,23,68,0.3);
+      border-radius: 100px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: #ff6085;
+      letter-spacing: 2px;
+    }
+
+    .live-dot {
+      width: 7px; height: 7px;
+      background: #ff1744;
+      border-radius: 50%;
+      animation: pulse-dot 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    .clock {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 14px;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+
+    /* ── City selector ── */
+    .city-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+
+    .city-label {
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-right: 4px;
+    }
+
+    .city-btn {
+      padding: 8px 18px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+
+    .city-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .city-btn.active {
+      border-color: var(--accent);
+      background: rgba(0,212,255,0.08);
+      color: var(--accent);
+    }
+
+    /* ── Overview strip ── */
+    .overview {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .ov-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ov-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--card-accent, var(--accent));
+    }
+
+    .ov-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .ov-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      letter-spacing: 1px;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .ov-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── Zone grid ── */
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 3px;
+      color: var(--accent);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .zones-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    /* ── Zone card ── */
+    .zone-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.25s, box-shadow 0.25s;
+      cursor: default;
+    }
+
+    .zone-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    }
+
+    .zone-card.level-green { --lc: var(--green); --lb: var(--green-bg); --lbd: var(--green-border); }
+    .zone-card.level-yellow { --lc: var(--yellow); --lb: var(--yellow-bg); --lbd: var(--yellow-border); }
+    .zone-card.level-orange { --lc: var(--orange); --lb: var(--orange-bg); --lbd: var(--orange-border); }
+    .zone-card.level-red { --lc: var(--red); --lb: var(--red-bg); --lbd: var(--red-border); }
+
+    .zone-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--lc);
+    }
+
+    /* Pulsing glow for red/orange */
+    .zone-card.level-red::after,
+    .zone-card.level-orange::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      border: 1px solid var(--lc);
+      opacity: 0;
+      animation: zone-pulse 2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes zone-pulse {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 0.25; }
+    }
+
+    .zone-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .zone-name {
+      font-weight: 600;
+      font-size: 16px;
+      color: #fff;
+      margin-bottom: 3px;
+    }
+
+    .zone-type {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .zone-badge {
+      padding: 5px 12px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      background: var(--lb);
+      border: 1px solid var(--lbd);
+      color: var(--lc);
+      white-space: nowrap;
+    }
+
+    /* Crowd bar */
+    .crowd-bar-wrap { margin-bottom: 16px; }
+    .crowd-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+
+    .crowd-bar-label span:last-child {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--lc);
+    }
+
+    .crowd-bar-track {
+      height: 6px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .crowd-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: var(--lc);
+      transition: width 1s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: 0 0 8px var(--lc);
+    }
+
+    /* Stats row */
+    .zone-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .stat-box {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .stat-box-label {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-box-val {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 15px;
+      color: #fff;
+    }
+
+    /* Alert banner */
+    .zone-alert {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 13px;
+      border-radius: 8px;
+      background: var(--lb);
+      border: 1px solid var(--lbd);
+      font-size: 12px;
+      color: var(--lc);
+      line-height: 1.4;
+    }
+
+    .zone-alert .alert-icon { font-size: 16px; flex-shrink: 0; }
+
+    /* Timestamp */
+    .zone-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 14px;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+      padding: 20px 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .legend-title {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      width: 100%;
+      margin-bottom: 6px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 13px;
+    }
+
+    .legend-dot {
+      width: 12px; height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .legend-item span { color: var(--text); }
+    .legend-item em { font-style: normal; color: var(--muted); font-size: 11px; margin-left: 4px; }
+
+    /* ── Timeline chart ── */
+    .timeline-section { margin-bottom: 40px; }
+
+    .chart-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .chart-title { font-size: 14px; font-weight: 500; color: #fff; }
+    .chart-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .chart-area {
+      position: relative;
+      height: 120px;
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .chart-bar-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+
+    .chart-bar {
+      width: 100%;
+      border-radius: 3px 3px 0 0;
+      transition: height 1s cubic-bezier(0.4,0,0.2,1);
+      min-height: 2px;
+    }
+
+    .chart-tick {
+      font-size: 9px;
+      color: var(--muted);
+      font-family: 'Share Tech Mono', monospace;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    /* ── Refresh countdown ── */
+    .countdown-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 32px;
+    }
+
+    .cd-label {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    .cd-track {
+      flex: 1;
+      height: 4px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .cd-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 100px;
+      transition: width 1s linear;
+      box-shadow: 0 0 6px var(--accent);
+    }
+
+    .cd-count {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: var(--accent);
+      white-space: nowrap;
+      min-width: 30px;
+      text-align: right;
+    }
+
+    /* ── Map placeholder ── */
+    .map-zone {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 40px;
+      height: 300px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .map-grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+
+    .map-dots {
+      position: absolute;
+      inset: 0;
+    }
+
+    .map-dot {
+      position: absolute;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .map-dot .dot-core {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      border: 2px solid #fff2;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .map-dot:hover .dot-core { transform: scale(1.4); }
+
+    .map-dot .dot-inner {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+    }
+
+    .map-dot .dot-ring {
+      position: absolute;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 1px solid currentColor;
+      animation: ring-expand 2s ease-out infinite;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    @keyframes ring-expand {
+      0% { width: 14px; height: 14px; opacity: 0.8; }
+      100% { width: 50px; height: 50px; opacity: 0; }
+    }
+
+    .map-label {
+      font-size: 9px;
+      color: var(--text);
+      white-space: nowrap;
+      margin-top: 4px;
+      font-family: 'Share Tech Mono', monospace;
+      text-align: center;
+    }
+
+    .map-dot-wrap {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .map-overlay-text {
+      position: absolute;
+      bottom: 16px; right: 20px;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .overview { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .overview { grid-template-columns: 1fr; }
+      .zones-grid { grid-template-columns: 1fr; }
+      header { flex-direction: column; gap: 16px; align-items: flex-start; }
+      .city-bar { gap: 8px; }
+    }
+
+    /* Fade-in on load */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .wrapper > * {
+      animation: fadeUp 0.5s ease both;
+    }
+    header { animation-delay: 0s; }
+    .city-bar { animation-delay: 0.05s; }
+    .countdown-bar { animation-delay: 0.1s; }
+    .overview { animation-delay: 0.15s; }
+    .legend { animation-delay: 0.2s; }
+    .zones-grid { animation-delay: 0.25s; }
+    .timeline-section { animation-delay: 0.3s; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🚦</div>
+      <div>
+        <div class="logo-text">TrafficPulse</div>
+        <div class="logo-sub">Live Urban Crowd Monitor</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <!-- City selector -->
+  <div class="city-bar">
+    <span class="city-label">City</span>
+    <button class="city-btn active" onclick="switchCity(this,'Mumbai')">Mumbai</button>
+    <button class="city-btn" onclick="switchCity(this,'Delhi')">Delhi</button>
+    <button class="city-btn" onclick="switchCity(this,'Bangalore')">Bangalore</button>
+    <button class="city-btn" onclick="switchCity(this,'Chennai')">Chennai</button>
+    <button class="city-btn" onclick="switchCity(this,'Hyderabad')">Hyderabad</button>
+  </div>
+
+  <!-- Countdown -->
+  <div class="countdown-bar">
+    <span class="cd-label">NEXT REFRESH IN</span>
+    <div class="cd-track"><div class="cd-fill" id="cdFill" style="width:100%"></div></div>
+    <span class="cd-count" id="cdCount">60s</span>
+  </div>
+
+  <!-- Overview -->
+  <div class="overview">
+    <div class="ov-card" style="--card-accent:#ff1744">
+      <div class="ov-label">Critical Zones</div>
+      <div class="ov-value" id="ov-critical">0</div>
+      <div class="ov-sub">Avoid travel</div>
+    </div>
+    <div class="ov-card" style="--card-accent:#ff6d00">
+      <div class="ov-label">High Congestion</div>
+      <div class="ov-value" id="ov-high">0</div>
+      <div class="ov-sub">Caution advised</div>
+    </div>
+    <div class="ov-card" style="--card-accent:#ffea00">
+      <div class="ov-label">Moderate</div>
+      <div class="ov-value" id="ov-moderate">0</div>
+      <div class="ov-sub">Slight delays</div>
+    </div>
+    <div class="ov-card" style="--card-accent:#00e676">
+      <div class="ov-label">Clear Zones</div>
+      <div class="ov-value" id="ov-clear">0</div>
+      <div class="ov-sub">Free flow</div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-title">Crowd Density Scale</div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#00e676"></div>
+      <span>Green</span><em>0–40% — Clear, free movement</em>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#ffea00"></div>
+      <span>Yellow</span><em>41–60% — Moderate crowd</em>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#ff6d00"></div>
+      <span>Orange</span><em>61–80% — High congestion</em>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#ff1744"></div>
+      <span>Red</span><em>81–100% — Critical, avoid travel</em>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="section-title">ZONE MAP</div>
+  <div class="map-zone">
+    <div class="map-grid-bg"></div>
+    <div class="map-dots" id="mapDots"></div>
+    <div class="map-overlay-text">REAL-TIME DENSITY MAP</div>
+  </div>
+
+  <!-- Zone cards -->
+  <div class="section-title">LIVE ZONE DATA</div>
+  <div class="zones-grid" id="zonesGrid"></div>
+
+  <!-- Timeline -->
+  <div class="timeline-section">
+    <div class="section-title">CONGESTION TIMELINE (last 20 updates)</div>
+    <div class="chart-wrap">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Average City-wide Crowd Density</div>
+          <div class="chart-sub" id="chartSub">Tracking last 20 data points</div>
+        </div>
+      </div>
+      <div class="chart-area" id="chartArea"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── City data ──────────────────────────────────────────────────
+const cities = {
+  Mumbai: [
+    { name: 'Dadar Station', type: 'Transit Hub', base: 75 },
+    { name: 'CST Area', type: 'Commercial', base: 68 },
+    { name: 'Bandra-Kurla Complex', type: 'Business', base: 55 },
+    { name: 'Marine Drive', type: 'Leisure', base: 42 },
+    { name: 'Dharavi Junction', type: 'Residential', base: 60 },
+    { name: 'Andheri West', type: 'Shopping', base: 72 },
+    { name: 'Worli Sea Link', type: 'Highway', base: 48 },
+    { name: 'Colaba Causeway', type: 'Market', base: 83 },
+  ],
+  Delhi: [
+    { name: 'Connaught Place', type: 'Commercial', base: 78 },
+    { name: 'Chandni Chowk', type: 'Market', base: 88 },
+    { name: 'Lajpat Nagar', type: 'Shopping', base: 65 },
+    { name: 'Saket Metro', type: 'Transit Hub', base: 58 },
+    { name: 'Aerocity', type: 'Business', base: 40 },
+    { name: 'GTB Nagar', type: 'Residential', base: 52 },
+    { name: 'Nehru Place', type: 'Commercial', base: 70 },
+    { name: 'Dwarka Sector 21', type: 'Transit Hub', base: 63 },
+  ],
+  Bangalore: [
+    // Central
+    { name: 'MG Road', type: 'Commercial', base: 72 },
+    { name: 'Brigade Road', type: 'Shopping', base: 74 },
+    { name: 'Majestic Bus Stand', type: 'Transit Hub', base: 89 },
+    { name: 'Shivajinagar', type: 'Market', base: 76 },
+    // South
+    { name: 'Silk Board', type: 'Junction', base: 92 },
+    { name: 'Electronic City', type: 'IT Corridor', base: 55 },
+    { name: 'Bannerghatta Road', type: 'Highway', base: 68 },
+    { name: 'JP Nagar', type: 'Residential', base: 52 },
+    { name: 'BTM Layout', type: 'Residential', base: 63 },
+    // East
+    { name: 'Whitefield', type: 'IT Corridor', base: 80 },
+    { name: 'Indiranagar', type: 'Leisure', base: 50 },
+    { name: 'Marathahalli', type: 'Junction', base: 85 },
+    { name: 'Old Airport Road', type: 'Highway', base: 70 },
+    // North
+    { name: 'Hebbal Flyover', type: 'Highway', base: 67 },
+    { name: 'Yelahanka', type: 'Residential', base: 45 },
+    { name: 'Kogilu Cross', type: 'Junction', base: 58 },
+    { name: 'Bellary Road', type: 'Highway', base: 73 },
+    // West
+    { name: 'Rajajinagar', type: 'Residential', base: 60 },
+    { name: 'Peenya Industrial', type: 'Industrial', base: 47 },
+    { name: 'Koramangala', type: 'Business', base: 58 },
+  ],
+  Chennai: [
+    { name: 'T. Nagar', type: 'Shopping', base: 85 },
+    { name: 'Marina Beach', type: 'Leisure', base: 60 },
+    { name: 'Anna Salai', type: 'Commercial', base: 70 },
+    { name: 'Koyambedu', type: 'Transit Hub', base: 76 },
+    { name: 'Adyar Junction', type: 'Junction', base: 55 },
+    { name: 'Guindy Industrial', type: 'Industrial', base: 45 },
+    { name: 'Velachery IT Park', type: 'IT Corridor', base: 62 },
+    { name: 'Egmore Station', type: 'Transit Hub', base: 72 },
+  ],
+  Hyderabad: [
+    { name: 'HITECH City', type: 'IT Corridor', base: 75 },
+    { name: 'Charminar', type: 'Historical', base: 82 },
+    { name: 'Banjara Hills', type: 'Leisure', base: 58 },
+    { name: 'Secunderabad Jn', type: 'Transit Hub', base: 70 },
+    { name: 'Gachibowli', type: 'Business', base: 63 },
+    { name: 'Jubilee Hills', type: 'Commercial', base: 50 },
+    { name: 'LB Nagar', type: 'Residential', base: 66 },
+    { name: 'Paradise Circle', type: 'Market', base: 79 },
+  ],
+};
+
+const mapPositions = [
+  { x: 48, y: 45 }, { x: 52, y: 50 }, { x: 42, y: 40 }, { x: 55, y: 42 },
+  { x: 50, y: 72 }, { x: 55, y: 85 }, { x: 45, y: 80 }, { x: 38, y: 75 }, { x: 52, y: 68 },
+  { x: 80, y: 48 }, { x: 68, y: 42 }, { x: 78, y: 60 }, { x: 72, y: 52 },
+  { x: 50, y: 18 }, { x: 58, y: 12 }, { x: 44, y: 22 }, { x: 62, y: 25 },
+  { x: 22, y: 42 }, { x: 18, y: 55 }, { x: 35, y: 58 },
+];
+
+// ── State ──────────────────────────────────────────────────────
+let currentCity = 'Mumbai';
+let zones = [];
+let history = [];
+let countdownSec = 60;
+let cdInterval;
+
+// ── Helpers ───────────────────────────────────────────────────
+function noiseVal(base) {
+  const noise = (Math.random() - 0.5) * 18;
+  return Math.min(100, Math.max(5, Math.round(base + noise)));
+}
+
+function getLevel(pct) {
+  if (pct >= 81) return 'red';
+  if (pct >= 61) return 'orange';
+  if (pct >= 41) return 'yellow';
+  return 'green';
+}
+
+function getLevelLabel(lvl) {
+  return { red: 'CRITICAL', orange: 'HIGH', yellow: 'MODERATE', green: 'CLEAR' }[lvl];
+}
+
+function getAlertMsg(lvl, name) {
+  if (lvl === 'red')    return `🚫 AVOID — ${name} is critically overcrowded. Do not travel here.`;
+  if (lvl === 'orange') return `⚠️ CAUTION — ${name} is heavily congested. Expect major delays.`;
+  if (lvl === 'yellow') return `🟡 MODERATE — Light congestion at ${name}. Plan extra time.`;
+  return `✅ CLEAR — ${name} is freely accessible. Good time to travel.`;
+}
+
+function getSpeed(pct) {
+  const kmh = Math.round(Math.max(3, 60 - pct * 0.55));
+  return kmh + ' km/h';
+}
+
+function getDelay(pct) {
+  if (pct >= 81) return '+' + Math.round(25 + (pct - 81) * 0.8) + ' min';
+  if (pct >= 61) return '+' + Math.round(10 + (pct - 61) * 0.7) + ' min';
+  if (pct >= 41) return '+' + Math.round(2 + (pct - 41) * 0.4) + ' min';
+  return 'None';
+}
+
+function colorForLevel(lvl) {
+  return { green: '#00e676', yellow: '#ffea00', orange: '#ff6d00', red: '#ff1744' }[lvl];
+}
+
+function nowStr() {
+  return new Date().toLocaleTimeString('en-IN', { hour12: false });
+}
+
+// ── Data generation ───────────────────────────────────────────
+function generateZones() {
+  return cities[currentCity].map(z => {
+    const crowd = noiseVal(z.base);
+    return { ...z, crowd, level: getLevel(crowd) };
+  });
+}
+
+function buildOverview() {
+  const counts = { red: 0, orange: 0, yellow: 0, green: 0 };
+  zones.forEach(z => counts[z.level]++);
+  document.getElementById('ov-critical').textContent = counts.red;
+  document.getElementById('ov-high').textContent     = counts.orange;
+  document.getElementById('ov-moderate').textContent = counts.yellow;
+  document.getElementById('ov-clear').textContent    = counts.green;
+}
+
+// ── Render zone cards ─────────────────────────────────────────
+function renderZones() {
+  const grid = document.getElementById('zonesGrid');
+  grid.innerHTML = '';
+
+  zones.forEach((z, i) => {
+    const card = document.createElement('div');
+    card.className = `zone-card level-${z.level}`;
+    card.style.animationDelay = `${i * 0.04}s`;
+
+    const population = Math.round(z.crowd * 120 + Math.random() * 200);
+
+    card.innerHTML = `
+      <div class="zone-header">
+        <div>
+          <div class="zone-name">${z.name}</div>
+          <div class="zone-type">${z.type}</div>
+        </div>
+        <div class="zone-badge">${getLevelLabel(z.level)}</div>
+      </div>
+
+      <div class="crowd-bar-wrap">
+        <div class="crowd-bar-label">
+          <span>Crowd Density</span>
+          <span>${z.crowd}%</span>
+        </div>
+        <div class="crowd-bar-track">
+          <div class="crowd-bar-fill" style="width:${z.crowd}%"></div>
+        </div>
+      </div>
+
+      <div class="zone-stats">
+        <div class="stat-box">
+          <div class="stat-box-label">Population</div>
+          <div class="stat-box-val">${population.toLocaleString()}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">Avg Speed</div>
+          <div class="stat-box-val">${getSpeed(z.crowd)}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">Delay</div>
+          <div class="stat-box-val">${getDelay(z.crowd)}</div>
+        </div>
+      </div>
+
+      <div class="zone-alert">
+        <span class="alert-icon">ℹ</span>
+        <span>${getAlertMsg(z.level, z.name)}</span>
+      </div>
+
+      <div class="zone-footer">
+        <span>Updated: ${nowStr()}</span>
+        <span>${z.crowd >= 81 ? '🔴' : z.crowd >= 61 ? '🟠' : z.crowd >= 41 ? '🟡' : '🟢'} ${colorName(z.level)}</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function colorName(lvl) {
+  return { green: 'GREEN ZONE', yellow: 'YELLOW ZONE', orange: 'ORANGE ZONE', red: 'RED ZONE' }[lvl];
+}
+
+// ── Render map dots ───────────────────────────────────────────
+function renderMap() {
+  const container = document.getElementById('mapDots');
+  container.innerHTML = '';
+
+  zones.forEach((z, i) => {
+    const pos = mapPositions[i] || { x: 50, y: 50 };
+    const col = colorForLevel(z.level);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'map-dot-wrap';
+    wrap.style.left = pos.x + '%';
+    wrap.style.top  = pos.y + '%';
+
+    wrap.innerHTML = `
+      <div class="map-dot level-${z.level}" style="color:${col}">
+        <div class="dot-ring" style="border-color:${col}"></div>
+        <div class="dot-core" style="background:${col}22; border-color:${col}55">
+          <div class="dot-inner" style="background:${col}"></div>
+        </div>
+      </div>
+      <div class="map-label" style="color:${col}">${z.name.split(' ')[0]}</div>
+    `;
+    container.appendChild(wrap);
+  });
+}
+
+// ── Timeline chart ────────────────────────────────────────────
+function renderChart() {
+  const area = document.getElementById('chartArea');
+  area.innerHTML = '';
+
+  const maxH = 110;
+  const data = history.slice(-20);
+
+  data.forEach((val, i) => {
+    const lvl = getLevel(val);
+    const col = colorForLevel(lvl);
+    const h = Math.round((val / 100) * maxH);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'chart-bar-wrap';
+
+    const bar = document.createElement('div');
+    bar.className = 'chart-bar';
+    bar.style.height = h + 'px';
+    bar.style.background = col;
+    bar.style.boxShadow = `0 0 6px ${col}66`;
+    bar.title = `${val}%`;
+
+    const tick = document.createElement('div');
+    tick.className = 'chart-tick';
+    tick.textContent = i === data.length - 1 ? 'NOW' : '';
+
+    wrap.appendChild(bar);
+    wrap.appendChild(tick);
+    area.appendChild(wrap);
+  });
+}
+
+// ── Clock ─────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent = nowStr();
+}
+
+// ── Countdown ─────────────────────────────────────────────────
+function startCountdown() {
+  clearInterval(cdInterval);
+  countdownSec = 60;
+  cdInterval = setInterval(() => {
+    countdownSec--;
+    const pct = (countdownSec / 60) * 100;
+    document.getElementById('cdFill').style.width = pct + '%';
+    document.getElementById('cdCount').textContent = countdownSec + 's';
+    if (countdownSec <= 0) refreshData();
+  }, 1000);
+}
+
+// ── Refresh ───────────────────────────────────────────────────
+function refreshData() {
+  zones = generateZones();
+  const avg = Math.round(zones.reduce((s, z) => s + z.crowd, 0) / zones.length);
+  history.push(avg);
+  if (history.length > 40) history.shift();
+
+  buildOverview();
+  renderZones();
+  renderMap();
+  renderChart();
+  startCountdown();
+}
+
+// ── City switch ───────────────────────────────────────────────
+function switchCity(btn, city) {
+  document.querySelectorAll('.city-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentCity = city;
+  history = [];
+  refreshData();
+}
+
+// ── Init ──────────────────────────────────────────────────────
+updateClock();
+setInterval(updateClock, 1000);
+refreshData();
+</script>
+</body>
+</html>
